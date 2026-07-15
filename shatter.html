@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SHATTERPOINT — Glass Destruction Simulator</title>
+<title>SHATTERPOINT — Pixel Break</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -43,10 +43,11 @@
     -webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:0 4px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);
   }
-  .modes{
+  .shapes{
     display:flex; gap:6px; padding:6px;
+    pointer-events:auto;
   }
-  .mode-btn{
+  .shape-btn{
     font-family:'Orbitron',sans-serif;
     font-size:10px; letter-spacing:0.5px;
     padding:9px 12px;
@@ -58,8 +59,8 @@
     transition:all .2s ease;
     white-space:nowrap;
   }
-  .mode-btn:hover{ color:#fff; background:rgba(255,255,255,0.06); }
-  .mode-btn.active{
+  .shape-btn:hover{ color:#fff; background:rgba(255,255,255,0.06); }
+  .shape-btn.active{
     color:#04060f;
     background:linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
     box-shadow:0 0 18px rgba(77,234,255,0.55);
@@ -153,7 +154,7 @@
   @media (max-width:720px){
     .stats{ padding:6px 12px; min-width:70px; }
     .stats .value{ font-size:16px; }
-    .mode-btn{ padding:8px 8px; font-size:8.5px; }
+    .shape-btn{ padding:8px 8px; font-size:8.5px; }
     .reset-btn{ padding:0 12px; font-size:9.5px; }
     .icon-btn{ width:32px; height:32px; font-size:13px; }
     .hint{ font-size:9px; padding:6px 12px; bottom:10px; }
@@ -165,10 +166,12 @@
 <canvas id="gameCanvas"></canvas>
 
 <div class="hud">
-  <div class="panel modes" id="modeButtons">
-    <button class="mode-btn active" data-mode="pane">GLASS PANE</button>
-    <button class="mode-btn" data-mode="tower">TOWER STACK</button>
-    <button class="mode-btn" data-mode="pixel">PIXEL BREAK</button>
+  <div class="panel shapes" id="shapeButtons">
+    <button class="shape-btn active" data-shape="gem">GEM</button>
+    <button class="shape-btn" data-shape="heart">HEART</button>
+    <button class="shape-btn" data-shape="star">STAR</button>
+    <button class="shape-btn" data-shape="ring">RING</button>
+    <button class="shape-btn" data-shape="invader">INVADER</button>
   </div>
 
   <div class="panel stats">
@@ -190,7 +193,7 @@
   </div>
 </div>
 
-<div class="hint" id="hint">TAP OR DRAG TO THROW — SHATTER THE GLASS</div>
+<div class="hint" id="hint">TAP OR DRAG TO THROW — SHATTER THE PIXELS</div>
 <div class="fps" id="fps">60 FPS</div>
 <div class="title-badge">SHATTERPOINT</div>
 
@@ -223,6 +226,7 @@ class AudioEngine{
   }
   ensure(){
     if(this.ctx) return;
+
     const AC = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AC();
     this.master = this.ctx.createGain();
@@ -441,22 +445,18 @@ class ParticlePool{
 class Fragment{
   constructor(){ this.alive=false; }
   init(opts){
-    // opts: points(local polygon around centroid, for style 'glass'/'block'), w,h (for pixel), x,y (world centroid), vx,vy, angVel, style, color, mass, groundY, homeX, homeY, homeRot
-    this.points = opts.points || null;
     this.w = opts.w||0; this.h=opts.h||0;
     this.x = opts.x; this.y = opts.y;
     this.vx = opts.vx||0; this.vy = opts.vy||0;
     this.rotation = opts.rotation||0;
     this.angVel = opts.angVel||0;
-    this.style = opts.style||'glass'; // 'glass' | 'pixel'
     this.color = opts.color || '#bfe9ff';
+    this.colorLight = opts.colorLight || opts.color;
     this.mass = opts.mass || 1;
-    this.radius = opts.radius || 14;
     this.settled = false;
     this.alive = true;
     this.homeX = opts.homeX!==undefined?opts.homeX:this.x;
     this.homeY = opts.homeY!==undefined?opts.homeY:this.y;
-    this.homeRot = opts.homeRot||0;
     this.life = 1;
     this.spawnScale = 0;
   }
@@ -464,15 +464,14 @@ class Fragment{
     if(!this.alive) return;
     if(this.spawnScale<1) this.spawnScale = Math.min(1, this.spawnScale + dt*8);
     if(this.settled) return;
-    this.vy += 1500*gravityScale*dt / Math.max(0.4,this.mass*0.0+1); // uniform gravity, mass affects via inertia feel
+    this.vy += 1500*gravityScale*dt;
     this.x += this.vx*dt;
     this.y += this.vy*dt;
     this.rotation += this.angVel*dt;
-    // air drag
     this.vx *= (1-0.08*dt);
     this.angVel *= (1-0.5*dt);
 
-    const halfH = this.style==='pixel' ? this.h/2 : this.radius*0.55;
+    const halfH = this.h/2;
     if(this.y + halfH > groundY){
       this.y = groundY - halfH;
       if(Math.abs(this.vy) > 40){
@@ -489,53 +488,23 @@ class Fragment{
         this.vx=0; this.vy=0; this.angVel=0;
       }
     }
-    // side walls (soft bounce off canvas edges) handled by caller bounds via clamp
   }
-  draw(ctx, glowColor){
+  draw(ctx){
     if(!this.alive) return;
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rotation);
     const s = this.spawnScale;
     ctx.scale(s,s);
-    if(this.style==='pixel'){
-      const w=this.w, h=this.h;
-      const grad = ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);
-      grad.addColorStop(0, this.colorLight || this.color);
-      grad.addColorStop(1, this.color);
-      ctx.fillStyle = grad;
-      ctx.fillRect(-w/2,-h/2,w,h);
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-      ctx.lineWidth=1;
-      ctx.strokeRect(-w/2,-h/2,w,h);
-    } else {
-      // glass shard polygon with refraction-like gradient + rim light
-      const pts = this.points;
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.closePath();
-      const grad = ctx.createLinearGradient(-this.radius,-this.radius,this.radius,this.radius);
-      grad.addColorStop(0, 'rgba(255,255,255,0.55)');
-      grad.addColorStop(0.35, this.color);
-      grad.addColorStop(0.7, this.colorDark || 'rgba(90,140,200,0.35)');
-      grad.addColorStop(1, 'rgba(255,255,255,0.15)');
-      ctx.fillStyle = grad;
-      ctx.fill();
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(220,240,255,0.55)';
-      ctx.stroke();
-      // small specular highlight
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = 'rgba(255,255,255,0.12)';
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x*0.3, pts[0].y*0.3);
-      ctx.lineTo(pts[1] ? pts[1].x*0.15 : 2, pts[1]?pts[1].y*0.15:2);
-      ctx.lineTo(0,0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
-    }
+    const w=this.w, h=this.h;
+    const grad = ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);
+    grad.addColorStop(0, this.colorLight);
+    grad.addColorStop(1, this.color);
+    ctx.fillStyle = grad;
+    ctx.fillRect(-w/2,-h/2,w,h);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth=1;
+    ctx.strokeRect(-w/2,-h/2,w,h);
     ctx.restore();
   }
 }
@@ -593,170 +562,10 @@ class Projectile{
 }
 
 //====================================================================
-// SHATTER PATTERN GENERATION (spider-web radial-crack triangulation)
-//====================================================================
-function generateShatterPolygons(cx, cy, boundsFn, impactX, impactY, seedCount){
-  // boundsFn(angle) returns max radius from (cx,cy) along angle before leaving shape bounds
-  const spokes = randInt(7,11);
-  const rings = randInt(2,3);
-  const angles = [];
-  for(let i=0;i<spokes;i++) angles.push((i/spokes)*TAU + rand(-0.18,0.18));
-  angles.sort((a,b)=>a-b);
-
-  const ringRadii = [];
-  for(let r=1;r<=rings;r++) ringRadii.push((r/rings));
-
-  const polys = [];
-  // central shard fan near impact point
-  const innerR = 0.14;
-  for(let i=0;i<angles.length;i++){
-    const a0=angles[i], a1=angles[(i+1)%angles.length];
-    const maxR0 = boundsFn(a0), maxR1 = boundsFn(a1);
-    const p0 = {x: impactX + Math.cos(a0)*innerR*maxR0*rand(0.6,1), y: impactY + Math.sin(a0)*innerR*maxR0*rand(0.6,1)};
-    const p1 = {x: impactX + Math.cos(a1)*innerR*maxR1*rand(0.6,1), y: impactY + Math.sin(a1)*innerR*maxR1*rand(0.6,1)};
-    polys.push([{x:impactX,y:impactY}, p0, p1]);
-  }
-  // ring bands from inner to outer
-  let prevRing = angles.map(a=>{
-    const maxR = boundsFn(a);
-    return {x: impactX + Math.cos(a)*innerR*maxR, y: impactY + Math.sin(a)*innerR*maxR};
-  });
-  for(let ri=0; ri<ringRadii.length; ri++){
-    const frac = ringRadii[ri];
-    const curRing = angles.map(a=>{
-      const maxR = boundsFn(a);
-      const jitter = rand(0.82,1.05);
-      const rr = Math.min(maxR, maxR*frac*jitter);
-      return {x: impactX + Math.cos(a)*rr, y: impactY + Math.sin(a)*rr};
-    });
-    for(let i=0;i<angles.length;i++){
-      const j=(i+1)%angles.length;
-      polys.push([prevRing[i], prevRing[j], curRing[j], curRing[i]]);
-    }
-    prevRing = curRing;
-  }
-  return polys; // array of point arrays (world coords, will be re-centered by caller)
-}
-
-function polyCentroid(pts){
-  let x=0,y=0;
-  for(const p of pts){ x+=p.x; y+=p.y; }
-  return {x:x/pts.length, y:y/pts.length};
-}
-function polyArea(pts){
-  let a=0;
-  for(let i=0;i<pts.length;i++){
-    const p1=pts[i], p2=pts[(i+1)%pts.length];
-    a += p1.x*p2.y - p2.x*p1.y;
-  }
-  return Math.abs(a)/2;
-}
-
-//====================================================================
 // BREAKABLE OBJECTS
 //====================================================================
 class BreakableBase{
   constructor(){ this.broken=false; this.fragments=[]; this.crackT=0; this.cracking=false; }
-}
-
-class Pane extends BreakableBase{
-  constructor(x,y,w,h,frameColor){
-    super();
-    this.x=x; this.y=y; this.w=w; this.h=h;
-    this.hue = rand(190,210);
-  }
-  get bounds(){ return {x:this.x,y:this.y,w:this.w,h:this.h}; }
-  containsPoint(px,py){ return px>=this.x && px<=this.x+this.w && py>=this.y && py<=this.y+this.h; }
-  drawIntact(ctx, t){
-    const {x,y,w,h}=this;
-    ctx.save();
-    if(this.cracking){
-      ctx.translate((Math.random()-0.5)*1.2*this.crackShake, (Math.random()-0.5)*1.2*this.crackShake);
-    }
-    const grad = ctx.createLinearGradient(x,y,x+w,y+h);
-    grad.addColorStop(0,`hsla(${this.hue},80%,75%,0.16)`);
-    grad.addColorStop(0.5,`hsla(${this.hue},85%,70%,0.10)`);
-    grad.addColorStop(1,`hsla(${this.hue},80%,60%,0.18)`);
-    ctx.fillStyle=grad;
-    ctx.fillRect(x,y,w,h);
-    // shine streak
-    ctx.save();
-    ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
-    ctx.fillStyle='rgba(255,255,255,0.10)';
-    ctx.beginPath();
-    ctx.moveTo(x+w*0.1,y); ctx.lineTo(x+w*0.28,y); ctx.lineTo(x-w*0.05,y+h); ctx.lineTo(x-w*0.22,y+h);
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
-    // frame
-    ctx.strokeStyle='rgba(140,160,220,0.55)';
-    ctx.lineWidth=3;
-    ctx.strokeRect(x+1.5,y+1.5,w-3,h-3);
-    // cracks (pre-shatter)
-    if(this.cracking && this.crackLines){
-      ctx.strokeStyle=`rgba(255,255,255,${0.5+0.4*Math.sin(t*40)})`;
-      ctx.lineWidth=1.4;
-      ctx.shadowColor='#bfe9ff'; ctx.shadowBlur=4;
-      for(const line of this.crackLines){
-        ctx.beginPath();
-        ctx.moveTo(line[0].x,line[0].y);
-        for(let i=1;i<line.length;i++) ctx.lineTo(line[i].x,line[i].y);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-}
-
-class TowerBlock extends BreakableBase{
-  constructor(x,y,w,h,hue){
-    super();
-    this.x=x; this.y=y; this.w=w; this.h=h; // x,y = center
-    this.rotation=0; this.vx=0; this.vy=0; this.angVel=0;
-    this.knocked=false; this.hue=hue;
-    this.homeX=x; this.homeY=y;
-  }
-  get left(){ return this.x-this.w/2; }
-  get right(){ return this.x+this.w/2; }
-  get top(){ return this.y-this.h/2; }
-  get bottom(){ return this.y+this.h/2; }
-  containsPoint(px,py){
-    // simple rotated check via inverse rotate
-    const dx=px-this.x, dy=py-this.y;
-    const cos=Math.cos(-this.rotation), sin=Math.sin(-this.rotation);
-    const lx = dx*cos-dy*sin, ly = dx*sin+dy*cos;
-    return lx>=-this.w/2 && lx<=this.w/2 && ly>=-this.h/2 && ly<=this.h/2;
-  }
-  update(dt, groundY, blocksBelowTop){
-    if(!this.knocked) return;
-    this.angVel *= (1-0.15*dt);
-    this.vy += 1500*dt;
-    this.x += this.vx*dt;
-    this.y += this.vy*dt;
-    this.rotation += this.angVel*dt;
-    this.vx *= (1-0.2*dt);
-    const restTop = groundY - this.h/2;
-    if(this.y > restTop && Math.abs(this.rotation)<0.05){
-      // landed roughly upright-ish, let settle
-    }
-  }
-  drawIntact(ctx){
-    ctx.save();
-    ctx.translate(this.x,this.y);
-    ctx.rotate(this.rotation);
-    const w=this.w,h=this.h;
-    const grad = ctx.createLinearGradient(-w/2,-h/2,w/2,h/2);
-    grad.addColorStop(0,`hsla(${this.hue},80%,78%,0.22)`);
-    grad.addColorStop(0.5,`hsla(${this.hue},85%,68%,0.14)`);
-    grad.addColorStop(1,`hsla(${this.hue},75%,55%,0.24)`);
-    ctx.fillStyle=grad;
-    ctx.fillRect(-w/2,-h/2,w,h);
-    ctx.fillStyle='rgba(255,255,255,0.14)';
-    ctx.fillRect(-w/2+3,-h/2+3,w*0.22,h-6);
-    ctx.strokeStyle='rgba(160,190,255,0.6)';
-    ctx.lineWidth=2;
-    ctx.strokeRect(-w/2+1,-h/2+1,w-2,h-2);
-    ctx.restore();
-  }
 }
 
 //====================================================================
@@ -771,7 +580,7 @@ class Game{
     this.fragments = [];
     this.fragPool = [];
     this.projectiles = [];
-    this.mode = 'pane';
+    this.mode = 'gem';
     this.score = 0;
     this.combo = 0;
     this.comboTimer = 0;
@@ -820,62 +629,63 @@ class Game{
     this.objects = [];
     this.fragments.length = 0;
     this.projectiles.length = 0;
-    if(this.mode==='pane') this.buildPaneLevel();
-    else if(this.mode==='tower') this.buildTowerLevel();
-    else this.buildPixelLevel();
-  }
-
-  buildPaneLevel(){
-    const margin = this.w*0.08;
-    const top = this.h*0.16;
-    const bottom = this.groundY - this.h*0.06;
-    const cols = this.w<700?2:3;
-    const rows = this.w<700?3:2;
-    const gap = 14;
-    const areaW = this.w - margin*2;
-    const areaH = bottom-top;
-    const cw = (areaW-gap*(cols-1))/cols;
-    const ch = (areaH-gap*(rows-1))/rows;
-    for(let r=0;r<rows;r++){
-      for(let c=0;c<cols;c++){
-        const x = margin + c*(cw+gap);
-        const y = top + r*(ch+gap);
-        this.objects.push(new Pane(x,y,cw,ch));
-      }
-    }
-  }
-
-  buildTowerLevel(){
-    const blockW = clamp(this.w*0.11, 56, 110);
-    const blockH = blockW*0.62;
-    const levels = 6;
-    const cx = this.w/2;
-    let y = this.groundY - blockH/2;
-    for(let i=0;i<levels;i++){
-      const hue = 195 + i*6;
-      const b = new TowerBlock(cx, y, blockW, blockH, hue);
-      this.objects.push(b);
-      y -= blockH+2;
-    }
+    this.buildPixelLevel();
   }
 
   buildPixelLevel(){
     const cell = clamp(this.w*0.022, 12, 22);
-    const gridR = 11; // radius in cells (diamond gem shape)
+    const gridR = 11; // radius in cells
     const cx = this.w/2;
     const cy = (this.h*0.16 + this.groundY - this.h*0.05)/2 - 20;
+    
+    const invader = [
+      "00100000100",
+      "00010001000",
+      "00111111100",
+      "01101110110",
+      "11111111111",
+      "10111111101",
+      "10100000101",
+      "00011011000"
+    ];
+
     for(let gy=-gridR; gy<=gridR; gy++){
       for(let gx=-gridR; gx<=gridR; gx++){
-        const d = Math.abs(gx)*0.62 + Math.abs(gy);
-        if(d<=gridR*0.82){
+        let keep = false;
+        if(this.mode === 'gem'){
+          const d = Math.abs(gx)*0.62 + Math.abs(gy);
+          keep = (d <= gridR*0.82);
+        } else if(this.mode === 'heart'){
+          const nx = gx / (gridR * 0.95);
+          const ny = -gy / (gridR * 0.95) + 0.15;
+          const val = nx * nx + Math.pow(ny - 0.6 * Math.sqrt(Math.abs(nx)), 2);
+          keep = (val <= 0.48);
+        } else if(this.mode === 'star'){
+          const r = Math.hypot(gx, gy) / gridR;
+          const angle = Math.atan2(gy, gx);
+          const starVal = 0.52 + 0.32 * Math.cos(5 * angle - Math.PI / 2);
+          keep = (r <= starVal);
+        } else if(this.mode === 'ring'){
+          const r = Math.hypot(gx, gy);
+          keep = (r <= gridR * 0.85 && r >= gridR * 0.4);
+        } else if(this.mode === 'invader'){
+          const r = gy + 4;
+          const c = gx + 5;
+          if (r >= 0 && r < 8 && c >= 0 && c < 11) {
+            keep = (invader[r][c] === '1');
+          }
+        }
+
+        if(keep){
           const x = cx + gx*cell;
           const y = cy + gy*cell;
           const angle = Math.atan2(gy,gx);
           const hue = ((angle+Math.PI)/TAU*360 + 200)%360;
+          const d = Math.hypot(gx, gy);
           const light = 55 + (1-d/(gridR*0.82))*20;
           const obj = {
             isPixel:true, x, y, w:cell-1.4, h:cell-1.4,
-            color:`hsl(${hue},85%,${light}%)`,
+            color:`hsl(${hue},85%,${clamp(light, 40, 85)}%)`,
             colorLight:`hsl(${hue},85%,${Math.min(90,light+22)}%)`,
             broken:false, homeX:x, homeY:y
           };
@@ -895,93 +705,7 @@ class Game{
     return f;
   }
 
-  shatterPane(pane, ix, iy, impactSpeed){
-    if(pane.broken) return;
-    pane.broken = true;
-    const {x,y,w,h} = pane;
-    const impactX = clamp(ix,x+4,x+w-4), impactY = clamp(iy,y+4,y+h-4);
-    const boundsFn = (angle)=>{
-      // distance to rectangle edge from impact point along angle
-      const dx=Math.cos(angle), dy=Math.sin(angle);
-      let tMax = Infinity;
-      if(dx>0) tMax=Math.min(tMax,(x+w-impactX)/dx);
-      if(dx<0) tMax=Math.min(tMax,(x-impactX)/dx);
-      if(dy>0) tMax=Math.min(tMax,(y+h-impactY)/dy);
-      if(dy<0) tMax=Math.min(tMax,(y-impactY)/dy);
-      return Math.max(4,tMax);
-    };
-    const polys = generateShatterPolygons(x+w/2,y+h/2, boundsFn, impactX, impactY);
-    const force = clamp(impactSpeed/500, 0.6, 3.2);
-    for(const poly of polys){
-      // clip roughly by clamping points into rect (cheap clipping)
-      const clamped = poly.map(p=>({x:clamp(p.x,x-2,x+w+2), y:clamp(p.y,y-2,y+h+2)}));
-      const c = polyCentroid(clamped);
-      const local = clamped.map(p=>({x:p.x-c.x,y:p.y-c.y}));
-      const area = polyArea(clamped);
-      const mass = clamp(area/500,0.4,3.5);
-      const dx = c.x-impactX, dy = c.y-impactY;
-      const dd = Math.max(1,Math.hypot(dx,dy));
-      const outSpeed = force*rand(120,320)*(1/Math.sqrt(mass));
-      const radius = Math.sqrt(area)*0.6+6;
-      this.spawnFragment({
-        points: local,
-        x:c.x, y:c.y,
-        vx: (dx/dd)*outSpeed + rand(-40,40),
-        vy: (dy/dd)*outSpeed - rand(60,180),
-        rotation: rand(0,TAU),
-        angVel: rand(-6,6),
-        style:'glass',
-        color: `hsla(${pane.hue},70%,72%,0.55)`,
-        colorDark: `hsla(${pane.hue},60%,40%,0.35)`,
-        mass, radius,
-        homeX: c.x, homeY: c.y, homeRot: 0
-      });
-    }
-  }
 
-  shatterBlockOnGround(block){
-    if(block.shattered) return;
-    block.shattered = true;
-    block.knocked = true;
-    const cx=block.x, cy=block.y, w=block.w, h=block.h;
-    const boundsFn=(angle)=>{
-      const dx=Math.cos(angle), dy=Math.sin(angle);
-      let tMax=Infinity;
-      if(dx!==0) tMax=Math.min(tMax, (w/2)/Math.abs(dx));
-      if(dy!==0) tMax=Math.min(tMax, (h/2)/Math.abs(dy));
-      return Math.max(4,tMax);
-    };
-    const polys = generateShatterPolygons(cx,cy, boundsFn, cx, cy, 6);
-    for(const poly of polys){
-      const rot = block.rotation;
-      const cos=Math.cos(rot), sin=Math.sin(rot);
-      const world = poly.map(p=>{
-        const lx = p.x-cx, ly = p.y-cy;
-        return { x: cx + lx*cos-ly*sin, y: cy + lx*sin+ly*cos };
-      });
-      const c = polyCentroid(world);
-      const local = world.map(p=>({x:p.x-c.x,y:p.y-c.y}));
-      const area = polyArea(world);
-      const mass = clamp(area/400,0.4,3);
-      const dx=c.x-cx, dy=c.y-cy;
-      const dd=Math.max(1,Math.hypot(dx,dy));
-      const radius = Math.sqrt(area)*0.6+6;
-      this.spawnFragment({
-        points: local, x:c.x, y:c.y,
-        vx:(dx/dd)*rand(60,220)+block.vx*0.3,
-        vy:(dy/dd)*rand(40,140)-rand(80,200),
-        rotation:rand(0,TAU), angVel:rand(-8,8),
-        style:'glass',
-        color:`hsla(${block.hue},70%,72%,0.55)`,
-        colorDark:`hsla(${block.hue},60%,40%,0.35)`,
-        mass, radius, homeX:c.x, homeY:c.y
-      });
-    }
-    this.particles.burstDust(cx,cy,this.quality?26:12,'rgba(200,220,255,0.7)');
-    this.particles.burstSparks(cx,cy,this.quality?18:8,'#bfe9ff');
-    this.audio.playGlassBreak(0.9);
-    this.addShake(6);
-  }
 
   shatterPixel(obj, impactX, impactY, force){
     if(obj.broken) return;
@@ -1061,12 +785,12 @@ class Game{
   // UI BINDING
   //--------------------------------------------------------------
   bindUI(){
-    document.getElementById('modeButtons').addEventListener('click',(e)=>{
-      const btn = e.target.closest('.mode-btn');
+    document.getElementById('shapeButtons').addEventListener('click',(e)=>{
+      const btn = e.target.closest('.shape-btn');
       if(!btn) return;
-      document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.shape-btn').forEach(b=>b.classList.remove('active'));
       btn.classList.add('active');
-      this.mode = btn.dataset.mode;
+      this.mode = btn.dataset.shape;
       this.buildLevel();
     });
     document.getElementById('resetBtn').addEventListener('click', ()=> this.startReassemble());
@@ -1213,99 +937,16 @@ class Game{
       f.update(dt, this.groundY, floorFriction, restitution, 1);
     }
 
-    // tower block physics (unbroken but knocked)
-    if(this.mode==='tower'){
-      this.updateTowerBlocks(dt);
-    }
-
     this.particles.update(dt);
   }
 
-  updateTowerBlocks(dt){
-    const blocks = this.objects;
-    for(const b of blocks){
-      if(!b.broken) b.update(dt, this.groundY);
-    }
-    // simple ground collision + shatter trigger
-    for(const b of blocks){
-      if(b.broken) continue;
-      const restTop = this.groundY - b.h/2;
-      if(b.knocked){
-        // once tipped enough or falling fast and touches ground -> shatter
-        if(b.y + Math.abs(Math.sin(b.rotation))*b.w/2 >= restTop-2){
-          const speed = Math.hypot(b.vx,b.vy);
-          if(Math.abs(b.rotation)>0.35 || speed>140){
-            this.shatterBlockOnGround(b);
-            this.registerBreak(6);
-          } else if(b.y>restTop){
-            b.y=restTop; b.vy=0;
-          }
-        }
-      }
-    }
-    // topple chain: if a lower block is broken/shattered, blocks above fall
-    for(let i=0;i<blocks.length;i++){
-      const b = blocks[i];
-      if(b.broken || b.knocked) continue;
-      const below = blocks[i+1];
-      if(below && below.broken){
-        b.knocked = true;
-        b.vx += rand(-20,20);
-        b.angVel += rand(-1,1);
-      }
-    }
-  }
-
   checkProjectileCollisions(p){
-    if(this.mode==='pane'){
-      for(const obj of this.objects){
-        if(obj.broken) continue;
-        if(obj.containsPoint(p.x,p.y)){
-          this.hitPane(obj, p);
-          return;
-        }
-      }
-    } else if(this.mode==='tower'){
-      for(const obj of this.objects){
-        if(obj.broken) continue;
-        if(obj.containsPoint(p.x,p.y)){
-          this.hitTower(obj, p);
-          return;
-        }
-      }
-    } else {
-      for(const obj of this.objects){
-        if(obj.broken) continue;
-        if(Math.abs(p.x-obj.x)<obj.w/2+p.radius*0.4 && Math.abs(p.y-obj.y)<obj.h/2+p.radius*0.4){
-          this.hitPixel(obj, p);
-        }
+    for(const obj of this.objects){
+      if(obj.broken) continue;
+      if(Math.abs(p.x-obj.x)<obj.w/2+p.radius*0.4 && Math.abs(p.y-obj.y)<obj.h/2+p.radius*0.4){
+        this.hitPixel(obj, p);
       }
     }
-  }
-
-  hitPane(pane, p){
-    const speed = Math.hypot(p.vx,p.vy);
-    this.shatterPane(pane, p.x, p.y, speed);
-    this.particles.burstDust(p.x,p.y, this.quality?30:14, `hsla(${pane.hue},70%,85%,0.8)`);
-    this.particles.burstSparks(p.x,p.y, this.quality?22:10, '#eaf6ff');
-    this.audio.playGlassBreak(clamp(speed/700,0.5,1.6));
-    this.addShake(clamp(speed/60,4,20));
-    this.triggerSlowMo();
-    this.registerBreak(10);
-    p.vx*=0.3; p.vy*=0.3;
-  }
-
-  hitTower(block, p){
-    const speed = Math.hypot(p.vx,p.vy);
-    block.knocked = true;
-    const hitOffset = (p.y - block.y)/ (block.h/2);
-    block.vx += p.vx*0.5;
-    block.vy += -Math.abs(p.vy)*0.15;
-    block.angVel += clamp(p.vx*0.01,-4,4) + rand(-0.6,0.6);
-    this.particles.burstSparks(p.x,p.y, this.quality?16:8, '#bfe9ff');
-    this.audio.playThud(clamp(speed/500,0.4,1.4));
-    this.addShake(clamp(speed/80,3,14));
-    p.vx*=0.35; p.vy*=0.35;
   }
 
   hitPixel(obj, p){
@@ -1323,13 +964,11 @@ class Game{
   }
 
   checkAllBroken(){
-    if(this.mode==='pixel'){
-      const remaining = this.objects.filter(o=>!o.broken).length;
-      if(remaining===0 && this.objects.length>0){
-        this.triggerSlowMo();
-        this.addShake(14);
-        this.audio.playGlassBreak(1.4);
-      }
+    const remaining = this.objects.filter(o=>!o.broken).length;
+    if(remaining===0 && this.objects.length>0){
+      this.triggerSlowMo();
+      this.addShake(14);
+      this.audio.playGlassBreak(1.4);
     }
   }
 
@@ -1380,23 +1019,16 @@ class Game{
     }
 
     // intact objects
-    const t = performance.now()/1000;
-    if(this.mode==='pane'){
-      for(const o of this.objects) if(!o.broken) o.drawIntact(ctx,t);
-    } else if(this.mode==='tower'){
-      for(const o of this.objects) if(!o.broken) o.drawIntact(ctx);
-    } else {
-      for(const o of this.objects){
-        if(o.broken) continue;
-        ctx.save();
-        ctx.translate(o.x,o.y);
-        const grad = ctx.createLinearGradient(-o.w/2,-o.h/2,o.w/2,o.h/2);
-        grad.addColorStop(0,o.colorLight);
-        grad.addColorStop(1,o.color);
-        ctx.fillStyle=grad;
-        ctx.fillRect(-o.w/2,-o.h/2,o.w,o.h);
-        ctx.restore();
-      }
+    for(const o of this.objects){
+      if(o.broken) continue;
+      ctx.save();
+      ctx.translate(o.x,o.y);
+      const grad = ctx.createLinearGradient(-o.w/2,-o.h/2,o.w/2,o.h/2);
+      grad.addColorStop(0,o.colorLight);
+      grad.addColorStop(1,o.color);
+      ctx.fillStyle=grad;
+      ctx.fillRect(-o.w/2,-o.h/2,o.w,o.h);
+      ctx.restore();
     }
 
     // fragments
