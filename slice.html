@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Physics Slope Lab — Simulator</title>
+  
+  <!-- Premium Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+  
+  <!-- External stylesheet -->
+  <link rel="stylesheet" href="slice.css">
+</head>
+<body>
+
+  <!-- Physics Rendering Area -->
+  <canvas id="gameCanvas"></canvas>
+  
+  <!-- CRT grid scanner overlay -->
+  <div class="overlay-grid"></div>
+
+  <!-- HUD Interface -->
+  <div class="hud">
+    <div class="panel stats">
+      <div class="stat-item">
+        <span class="label">SPAWNED</span>
+        <span class="value" id="spawnedVal">0</span>
+      </div>
+      <div class="stat-item" style="border-left: 1px solid rgba(255,255,255,0.12); padding-left: 15px;">
+        <span class="label">ACTIVE</span>
+        <span class="value" id="activeVal">0</span>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <a href="index.html" class="icon-btn" title="Arcade Hub" style="text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </a>
+      <button class="icon-btn on" id="muteBtn" title="Mute/Unmute">🔊</button>
+      <button class="reset-btn" id="resetBtn">⟲ RESET</button>
+    </div>
+  </div>
+
+  <!-- Spawner Controls -->
+  <div class="bottom-bar">
+    <div class="selection-title">SPAWN SHAPES</div>
+    <div class="spawn-buttons" id="spawnerButtons">
+      <button class="spawn-btn active" data-shape="random" draggable="true">🎲 RANDOM</button>
+      <button class="spawn-btn" data-shape="circle" draggable="true">🔵 CIRCLE</button>
+      <button class="spawn-btn" data-shape="square" draggable="true">🟩 SQUARE</button>
+      <button class="spawn-btn" data-shape="triangle" draggable="true">🔺 TRIANGLE</button>
+      <button class="spawn-btn" data-shape="pentagon" draggable="true">⬠ PENTAGON</button>
+      <button class="spawn-btn" data-shape="hexagon" draggable="true">⬢ HEXAGON</button>
+      <button class="spawn-btn" data-shape="capsule" draggable="true">💊 CAPSULE</button>
+      <button class="spawn-btn" data-shape="star" draggable="true">⭐ STAR</button>
+      <button class="spawn-btn" data-shape="convex" draggable="true">🛡️ POLYGON</button>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">CLICK CANVAS, DRAG BUTTONS, OR PRESS SPACE TO SPAWN</div>
+  <div class="fps" id="fps">60 FPS</div>
+  <div class="title-badge">PHYSICS SLOPE LAB</div>
+
+  <!-- External game loop and physics engine -->
+  <script src="slice.js"></script>
+</body>
+</html>
