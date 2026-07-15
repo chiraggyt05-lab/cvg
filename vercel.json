@@ -1,0 +1,17 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/game",
+      "destination": "/game.html"
+    },
+    {
+      "source": "/shatter",
+      "destination": "/shatter.html"
+    },
+    {
+      "source": "/shatter-advanced",
+      "destination": "/shatter_new.html"
+    }
+  ]
+}
