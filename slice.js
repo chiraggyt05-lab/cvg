@@ -824,12 +824,14 @@ class Game {
         const t = ((b.x - this.slopeStart.x) * dx + (b.y - this.slopeStart.y) * dy) / (len * len);
         
         // Check if shape sits directly over the inclined slope segment
-        if (t >= -0.04 && t <= 1.04) {
+        if (t >= -0.05 && t <= 1.05) {
           if (b.type === 'circle') {
             const dist = sA * b.x + sB * b.y + sC;
-            if (dist < b.r) {
-              const depth = b.r - dist;
-              const contact = new Vec2(b.x - nx * b.r, b.y - ny * b.r);
+            // dist > -b.r: circle bottom is below the slope
+            // dist < b.r * 1.5: circle is not too far below (e.g. has not passed completely through)
+            if (dist > -b.r && dist < b.r * 1.5) {
+              const depth = b.r + dist;
+              const contact = new Vec2(b.x - nx * dist, b.y - ny * dist);
               const slopeDummy = { isStatic: true, friction: 0.12, restitution: 0.15, x: contact.x, y: contact.y, vx: 0, vy: 0, angVel: 0 };
               resolveCollision(b, slopeDummy, new Vec2(nx, ny), depth, contact);
             }
@@ -840,8 +842,10 @@ class Game {
 
             for (const v of verts) {
               const dist = sA * v.x + sB * v.y + sC;
-              if (dist < 0) { // Penetration
-                const depth = -dist;
+              // dist > 0: vertex is below the slope
+              // dist < 40: vertex is not too far below the slope
+              if (dist > 0 && dist < 40) { 
+                const depth = dist;
                 if (depth > maxDepth) {
                   maxDepth = depth;
                   deepestVert = v;
