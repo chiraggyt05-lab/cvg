@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Falling Sand Physics Simulator</title>
+  
+  <!-- Premium Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="sand_sim.css">
+</head>
+<body>
+
+  <!-- Fullscreen Main Simulation Canvas -->
+  <canvas id="sandCanvas"></canvas>
+
+  <!-- Interactive HUD & UI Layers -->
+  <div class="ui-layer">
+    
+    <!-- Top Toolbar Panel -->
+    <header class="toolbar top-bar glass-panel">
+      <div class="brand">
+        <span class="brand-logo">⏳</span>
+        <h1>SandLab</h1>
+      </div>
+
+      <!-- Scrollable Element Selector -->
+      <div class="material-scroll-container">
+        <div class="material-grid" id="material-selector">
+          <!-- Populated by JavaScript with gorgeous colors -->
+        </div>
+      </div>
+
+      <!-- Parameter Sliders -->
+      <div class="controls-group">
+        <div class="slider-box">
+          <label for="brush-size">Size: <span id="brush-size-val">12</span></label>
+          <input type="range" id="brush-size" min="1" max="30" value="12">
+        </div>
+        <div class="slider-box">
+          <label for="flow-rate">Flow: <span id="flow-rate-val">60%</span></label>
+          <input type="range" id="flow-rate" min="10" max="100" value="60" step="5">
+        </div>
+      </div>
+
+      <!-- Action Commands -->
+      <div class="actions-group">
+        <button id="btn-play-pause" class="icon-btn tooltip" data-tooltip="Pause/Resume">
+          <svg id="icon-pause" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="6" y="4" width="4" height="16" rx="1"></rect>
+            <rect x="14" y="4" width="4" height="16" rx="1"></rect>
+          </svg>
+          <svg id="icon-play" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
+
+        <button id="btn-clear" class="icon-btn text-danger tooltip" data-tooltip="Clear Canvas">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- HUD Stats -->
+      <div class="hud-stats">
+        <div class="stat-badge">
+          <span class="stat-label">FPS</span>
+          <span id="fps-counter" class="stat-value">60</span>
+        </div>
+        <div class="stat-badge">
+          <span class="stat-label">Grains</span>
+          <span id="particle-counter" class="stat-value">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Sidebar Tools Panel (Special modifiers: explosion, wind, vacuum, fountain, rain) -->
+    <aside class="sidebar glass-panel">
+      <h3>Special Tools</h3>
+      
+      <button class="tool-btn active" id="tool-draw" data-tool="draw">
+        <span class="tool-icon">✏️</span>
+        <span class="tool-label">Paint Brush</span>
+      </button>
+
+      <button class="tool-btn" id="tool-explosion" data-tool="explosion">
+        <span class="tool-icon">💥</span>
+        <span class="tool-label">Explosion</span>
+      </button>
+
+      <button class="tool-btn" id="tool-wind" data-tool="wind">
+        <span class="tool-icon">💨</span>
+        <span class="tool-label">Wind Brush</span>
+      </button>
+
+      <button class="tool-btn" id="tool-vacuum" data-tool="vacuum">
+        <span class="tool-icon">🕳️</span>
+        <span class="tool-label">Vacuum</span>
+      </button>
+
+      <button class="tool-btn" id="tool-fountain" data-tool="fountain">
+        <span class="tool-icon">⛲</span>
+        <span class="tool-label">Sand Spout</span>
+      </button>
+
+      <div class="separator"></div>
+
+      <button class="toggle-btn" id="btn-rain">
+        <span class="toggle-icon">🌧️</span>
+        <span class="toggle-label">Sky Rain</span>
+      </button>
+    </aside>
+
+    <!-- Bottom Toolbar Panel -->
+    <footer class="toolbar bottom-bar glass-panel">
+      <!-- Left side settings -->
+      <div class="controls-left">
+        <button id="btn-mute" class="icon-btn tooltip" data-tooltip="Toggle Audio">
+          <svg id="sound-on-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="sound-off-icon" class="hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <button id="btn-slow-mo" class="toggle-btn inline-toggle">
+          <span class="toggle-label">🐢 Slow Mo</span>
+        </button>
+
+        <div class="slider-box speed-slider">
+          <label for="time-speed">Speed: <span id="time-speed-val">1x</span></label>
+          <input type="range" id="time-speed" min="0.25" max="3" value="1.0" step="0.25">
+        </div>
+      </div>
+
+      <!-- Center gravity controls -->
+      <div class="controls-center">
+        <span class="control-title">Gravity:</span>
+        <button class="gravity-btn active" data-gravity="down">⬇️ Down</button>
+        <button class="gravity-btn" data-gravity="none">🌌 None</button>
+        <button class="gravity-btn" data-gravity="up">⬆️ Up</button>
+        <button class="gravity-btn" data-gravity="left">⬅️ Left</button>
+        <button class="gravity-btn" data-gravity="right">➡️ Right</button>
+      </div>
+
+      <!-- Right side actions -->
+      <div class="controls-right">
+        <button id="btn-screenshot" class="icon-btn tooltip" data-tooltip="Save Screenshot">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+        </button>
+        
+        <button class="secondary-btn" onclick="location.href='index.html'">Arcade Hub</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="sand_sim.js"></script>
+</body>
+</html>

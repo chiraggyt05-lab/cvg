@@ -1,0 +1,555 @@
+/* ==========================================================================
+   Sand Simulation CSS Stylesheet
+   Design Philosophy: Minimal, Glassmorphism, Dark Mode, Relaxing Vibe
+   ========================================================================== */
+
+:root {
+  --bg-dark: #0f172a;
+  --bg-dark-rgb: 15, 23, 42;
+  
+  --panel-bg: rgba(15, 23, 42, 0.65);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  
+  --text-light: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-danger: #ef4444;
+  
+  --accent-blue: #38bdf8;
+  
+  /* Fonts */
+  --font-display: 'Fredoka', sans-serif;
+  --font-sans: 'Outfit', sans-serif;
+}
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  font-family: var(--font-sans);
+  position: relative;
+}
+
+/* Background animated gradient */
+body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, rgba(15, 23, 42, 0) 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Fullscreen Simulation Canvas */
+#sandCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: crosshair;
+  background-color: var(--bg-dark);
+}
+
+/* UI Elements Overlay Layer */
+.ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none; /* Let clicks pass through to canvas */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Glassmorphism Panel base */
+.glass-panel {
+  pointer-events: auto; /* Re-enable clicks for interface panels */
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  border-radius: 18px;
+}
+
+/* Toolbar Panel positioning */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  width: 100%;
+}
+
+.top-bar {
+  margin-bottom: auto;
+}
+
+/* Brand logo details */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-logo {
+  font-size: 1.6rem;
+}
+
+.brand h1 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+/* Scrollable Material selector */
+.material-scroll-container {
+  flex: 1;
+  max-width: 50%;
+  overflow-x: auto;
+  margin: 0 20px;
+  padding-bottom: 3px;
+}
+
+/* Hide scrollbars but keep scrolling */
+.material-scroll-container::-webkit-scrollbar {
+  height: 4px;
+}
+.material-scroll-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 2px;
+}
+.material-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+
+.material-grid {
+  display: flex;
+  gap: 8px;
+  width: max-content;
+}
+
+/* Material button visual */
+.material-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.material-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-light);
+  transform: translateY(-1px);
+}
+
+.material-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--mat-color, var(--accent-blue));
+  color: var(--text-light);
+  box-shadow: 0 0 12px rgba(var(--mat-color-rgb, 56, 189, 248), 0.25);
+}
+
+.material-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--mat-color, #fff);
+  box-shadow: 0 0 8px var(--mat-color, #fff);
+}
+
+/* Controls groups */
+.controls-group {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-right: 15px;
+}
+
+.slider-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 90px;
+}
+
+.slider-box label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.slider-box input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  cursor: pointer;
+}
+
+.slider-box input[type="range"]::-webkit-canvas-run-track {
+  height: 4px;
+}
+
+.slider-box input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-light);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+  transition: transform 0.1s ease;
+}
+
+.slider-box input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Action controls */
+.actions-group {
+  display: flex;
+  gap: 8px;
+  margin-right: 15px;
+}
+
+.icon-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text-light);
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+}
+
+.icon-btn.text-danger:hover {
+  border-color: var(--text-danger);
+  color: var(--text-danger);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.15);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Stats tags */
+.hud-stats {
+  display: flex;
+  gap: 10px;
+}
+
+.stat-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 6px 12px;
+  border-radius: 10px;
+  min-width: 48px;
+}
+
+.stat-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  color: var(--text-light);
+}
+
+/* ==========================================================================
+   Sidebar special tools panel
+   ========================================================================== */
+.sidebar {
+  position: absolute;
+  top: 100px;
+  left: 20px;
+  width: 145px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+
+.sidebar h3 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.tool-btn, .toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.tool-btn:hover, .toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-light);
+  transform: translateX(2px);
+}
+
+.tool-btn.active, .toggle-btn.active {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: var(--accent-blue);
+  color: var(--text-light);
+}
+
+.tool-icon {
+  font-size: 1.1rem;
+}
+
+.separator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 5px 0;
+}
+
+/* ==========================================================================
+   Bottom toolbar controls
+   ========================================================================== */
+.bottom-bar {
+  margin-top: auto;
+  gap: 20px;
+}
+
+.controls-left, .controls-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.speed-slider {
+  min-width: 75px;
+}
+
+.controls-center {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.control-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 0 10px;
+  font-weight: 600;
+}
+
+.gravity-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.gravity-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-light);
+}
+
+.gravity-btn.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-light);
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-light);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.inline-toggle {
+  width: auto;
+  padding: 8px 14px;
+}
+
+/* ==========================================================================
+   Tooltips and CSS alerts
+   ========================================================================== */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-light);
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.tooltip:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .ui-layer {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .top-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+  
+  .brand {
+    display: none; /* Hide logo on small screens to save space */
+  }
+  
+  .material-scroll-container {
+    max-width: 100%;
+    margin: 0;
+    order: 1; /* Pushes selector to next row */
+  }
+  
+  .sidebar {
+    top: auto;
+    bottom: 90px;
+    left: 10px;
+    width: 60px; /* Condensed icons sidebar for mobile */
+    padding: 8px;
+    border-radius: 12px;
+  }
+  
+  .sidebar h3, .sidebar .tool-label, .sidebar .toggle-label {
+    display: none;
+  }
+  
+  .tool-btn, .toggle-btn {
+    padding: 10px;
+    justify-content: center;
+  }
+  
+  .bottom-bar {
+    flex-direction: column;
+    padding: 10px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+  
+  .controls-left, .controls-center, .controls-right {
+    width: 100%;
+    justify-content: space-around;
+  }
+  
+  .controls-center {
+    order: -1;
+  }
+}

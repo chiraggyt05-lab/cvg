@@ -12,6 +12,14 @@
     {
       "source": "/shatter-advanced",
       "destination": "/shatter_new.html"
+    },
+    {
+      "source": "/bubble",
+      "destination": "/bubble.html"
+    },
+    {
+      "source": "/sand-sim",
+      "destination": "/sand_sim.html"
     }
   ]
 }

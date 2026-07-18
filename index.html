@@ -212,6 +212,18 @@
       --accent-sec: var(--neon-magenta);
     }
 
+    .game-card.bubble-pop {
+      --accent: var(--neon-magenta);
+      --accent-glow: var(--glow-magenta);
+      --accent-sec: var(--neon-cyan);
+    }
+
+    .game-card.sand-sim {
+      --accent: var(--neon-amber);
+      --accent-glow: var(--glow-amber);
+      --accent-sec: var(--neon-cyan);
+    }
+
     .game-card:hover {
       transform: translateY(-10px) scale(1.02);
       border-color: var(--accent);
@@ -454,6 +466,115 @@
       0% { width: 10px; height: 10px; opacity: 1; }
       60% { width: 90px; height: 90px; opacity: 0.4; }
       100% { width: 130px; height: 130px; opacity: 0; }
+    }
+
+    /* Preview Art: Bubble Wrap Pop */
+    .art-bubble-pop {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+    }
+    .art-bubble-item {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 0, 127, 0.15) 50%, rgba(0, 0, 0, 0.05) 100%);
+      border: 1.5px solid rgba(255, 0, 127, 0.3);
+      box-shadow: inset 1px 1px 3px rgba(255, 255, 255, 0.6), 0 0 10px rgba(255, 0, 127, 0.1);
+      position: relative;
+      animation: previewFloat 3s infinite alternate ease-in-out;
+    }
+    .art-bubble-item::before {
+      content: '';
+      position: absolute;
+      top: 10%;
+      left: 15%;
+      width: 35%;
+      height: 25%;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 50% 50% 40% 40% / 60% 60% 30% 30%;
+    }
+    .art-bubble-item.popped {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1.5px dashed rgba(255, 255, 255, 0.18);
+      box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
+      animation: none;
+    }
+    .art-bubble-item.popped::before {
+      top: 50%;
+      left: 50%;
+      width: 25%;
+      height: 25%;
+      background: none;
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .art-bubble-item:nth-child(1) { animation-delay: 0s; }
+    .art-bubble-item:nth-child(2) { animation-delay: 0.5s; }
+    .art-bubble-item:nth-child(3) { animation-delay: 1.0s; }
+    
+    @keyframes previewFloat {
+      0% { transform: translateY(0px) scale(1); }
+      100% { transform: translateY(-8px) scale(1.05); }
+    }
+
+    /* Preview Art: Sand Simulation */
+    .art-sand-sim {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .sand-hourglass {
+      font-size: 3.2rem;
+      animation: sandHourglassSpin 4s infinite ease-in-out;
+      text-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+      z-index: 3;
+    }
+    .sand-particle-drift {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--neon-amber);
+      box-shadow: 0 0 6px var(--neon-amber);
+      border-radius: 50%;
+      opacity: 0;
+      z-index: 2;
+    }
+    .sd-1 { left: 45%; top: 40%; animation: sandDrift1 2.5s infinite linear; }
+    .sd-2 { left: 52%; top: 40%; animation: sandDrift2 2.5s infinite linear; }
+    .sd-3 { left: 48%; top: 38%; animation: sandDrift3 2.5s infinite linear; }
+
+    @keyframes sandHourglassSpin {
+      0%, 85% { transform: rotate(0deg); }
+      100% { transform: rotate(180deg); }
+    }
+    @keyframes sandDrift1 {
+      0% { transform: translate(0, -10px) scale(1); opacity: 0; }
+      10% { opacity: 0.9; }
+      90% { opacity: 0.9; }
+      100% { transform: translate(0, 30px) scale(0.3); opacity: 0; }
+    }
+    @keyframes sandDrift2 {
+      0% { transform: translate(-3px, -10px) scale(0.8); opacity: 0; }
+      20% { opacity: 0.8; }
+      80% { opacity: 0.8; }
+      100% { transform: translate(-3px, 35px) scale(0.2); opacity: 0; }
+    }
+    @keyframes sandDrift3 {
+      0% { transform: translate(3px, -10px) scale(1.1); opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { transform: translate(3px, 25px) scale(0.4); opacity: 0; }
     }
 
     /* Card Details */
@@ -715,6 +836,55 @@
           <p class="card-desc">Spawn squares, triangles, capsules, circles, and custom polygons on an inclined slope. Watch them roll, tumble, slide, and collide in a real-time vector physics sandbox.</p>
           <button class="play-btn">
             <span>Play Slope Lab</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Card 4: Bubble Wrap Pop -->
+      <section class="game-card bubble-pop" onclick="location.href='bubble.html'">
+        <div class="card-preview">
+          <div class="art-bubble-pop">
+            <div class="art-bubble-item"></div>
+            <div class="art-bubble-item popped"></div>
+            <div class="art-bubble-item"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="card-badge-row">
+            <span class="badge highlight">Sensory</span>
+            <span class="badge">Relaxing</span>
+            <span class="badge">Casual</span>
+          </div>
+          <h2 class="card-title">Bubble Wrap Pop</h2>
+          <p class="card-desc">Experience a satisfying bubble wrap simulator. Features soft glassmorphic graphics, realistic synthesized pops, combo multiplier bonuses, and therapeutic relaxation modes.</p>
+          <button class="play-btn">
+            <span>Play Bubble Pop</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- Card 5: SandLab Simulator -->
+      <section class="game-card sand-sim" onclick="location.href='sand_sim.html'">
+        <div class="card-preview">
+          <div class="art-sand-sim">
+            <div class="sand-hourglass">⏳</div>
+            <div class="sand-particle-drift sd-1"></div>
+            <div class="sand-particle-drift sd-2"></div>
+            <div class="sand-particle-drift sd-3"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="card-badge-row">
+            <span class="badge highlight">Physics</span>
+            <span class="badge">Simulation</span>
+            <span class="badge">Sandbox</span>
+          </div>
+          <h2 class="card-title">SandLab Simulator</h2>
+          <p class="card-desc">Interact with a high-performance falling sand physics engine. Paint with colored sands, stones, flowing water, and glowing lava. Play with gravity, wind, and explosions.</p>
+          <button class="play-btn">
+            <span>Play SandLab</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           </button>
         </div>

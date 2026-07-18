@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bubble Wrap Pop — Satisfying Relaxation</title>
+  
+  <!-- Google Fonts for Friendly and Modern Feel -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="bubble.css">
+</head>
+<body>
+
+  <!-- Floating Background Circles -->
+  <div class="bg-circles">
+    <div class="bg-circle c1"></div>
+    <div class="bg-circle c2"></div>
+    <div class="bg-circle c3"></div>
+    <div class="bg-circle c4"></div>
+  </div>
+
+  <!-- Main Application Wrapper -->
+  <div class="app-container">
+    
+    <!-- Screen 1: Start Menu -->
+    <div id="menu-screen" class="glass-panel active">
+      <div class="bubble-logo-container">
+        <!-- Graphic display of interactive bubbles in title -->
+        <div class="logo-bubble-grid">
+          <div class="logo-bubble logo-pop"></div>
+          <div class="logo-bubble"></div>
+          <div class="logo-bubble"></div>
+          <div class="logo-bubble logo-pop"></div>
+        </div>
+        <h1 class="logo-title">Bubble Pop!</h1>
+        <p class="logo-subtitle">The ultimate relaxing sensory experience</p>
+      </div>
+
+      <div class="mode-selection">
+        <h3>Choose Your Game Mode:</h3>
+        
+        <button id="btn-mode-timed" class="menu-btn mode-btn active" data-mode="timed">
+          <div class="btn-icon">⏱️</div>
+          <div class="btn-info">
+            <span class="mode-name">Timed Challenge</span>
+            <span class="mode-desc">Pop as much as you can in 60s! Level up to shrink bubbles and test your reflexes.</span>
+          </div>
+        </button>
+
+        <button id="btn-mode-zen" class="menu-btn mode-btn" data-mode="zen">
+          <div class="btn-icon">🧘</div>
+          <div class="btn-info">
+            <span class="mode-name">Zen Relaxation</span>
+            <span class="mode-desc">No timers, no pressure. Simply pop to your heart's content. Refill anytime.</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="high-scores-preview">
+        <div class="score-card">
+          <span class="score-label">Timed Best</span>
+          <span id="best-score-val" class="score-num">0</span>
+        </div>
+        <div class="score-card">
+          <span class="score-label">Total Pops</span>
+          <span id="total-pops-val" class="score-num">0</span>
+        </div>
+      </div>
+
+      <div class="menu-actions">
+        <button id="btn-start" class="primary-btn">Start Game</button>
+        <button class="secondary-btn" onclick="location.href='index.html'">Back to Arcade Hub</button>
+      </div>
+    </div>
+
+    <!-- Screen 2: Game Screen -->
+    <div id="game-screen" class="game-layout">
+      
+      <!-- Top Navigation & Stats Bar -->
+      <div class="stats-bar glass-panel">
+        <div class="stats-left">
+          <button id="btn-home" class="icon-btn" title="Main Menu">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+          </button>
+          
+          <button id="btn-mute" class="icon-btn" title="Toggle Sound">
+            <!-- Dynamic Sound Icon -->
+            <svg id="sound-on-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+            <svg id="sound-off-icon" class="hidden" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="stats-center">
+          <div class="stat-box">
+            <span class="stat-label">Score</span>
+            <span id="score-counter" class="stat-value scale-up">0</span>
+          </div>
+
+          <div id="timer-box" class="stat-box">
+            <span class="stat-label">Time</span>
+            <span id="timer-counter" class="stat-value">60s</span>
+          </div>
+
+          <div id="combo-box" class="stat-box combo-inactive">
+            <span class="stat-label">Combo</span>
+            <span id="combo-multiplier" class="stat-value">x1</span>
+            <!-- Combo timer ring/bar overlay -->
+            <div class="combo-bar-container">
+              <div id="combo-bar-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-right">
+          <div class="stat-box">
+            <span class="stat-label">Pops Left</span>
+            <span id="left-counter" class="stat-value">100</span>
+          </div>
+          
+          <div class="stat-box level-indicator-box">
+            <span class="stat-label">Level</span>
+            <span id="level-counter" class="stat-value">1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Play Area (Grid Sheet with Overlays) -->
+      <div class="play-area-container">
+        <!-- Floating Text Container -->
+        <div id="floating-text-container" class="floating-container"></div>
+        
+        <!-- Canvas for Particles (sparks/bubbles/bursts) -->
+        <canvas id="particleCanvas" class="effects-canvas"></canvas>
+        
+        <!-- Canvas for Confetti Rain -->
+        <canvas id="confettiCanvas" class="effects-canvas"></canvas>
+        
+        <!-- Bubble Wrap Container (Glassmorphic) -->
+        <div id="sheet-container" class="sheet-container glass-panel">
+          <div id="bubble-grid" class="bubble-grid">
+            <!-- Bubbles will be generated here by Javascript -->
+          </div>
+        </div>
+
+        <!-- Refill Animation Overlay -->
+        <div id="refill-overlay" class="refill-overlay">
+          <div class="refill-loader">
+            <div class="loading-bubble"></div>
+            <div class="loading-bubble"></div>
+            <div class="loading-bubble"></div>
+          </div>
+          <span class="refill-text">Rolling Out Fresh Sheet...</span>
+        </div>
+      </div>
+
+      <!-- Bottom Control Options -->
+      <div class="controls-bar">
+        <button id="btn-restart" class="action-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Restart
+        </button>
+
+        <button id="btn-refill" class="action-btn secondary">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+          Refill Sheet
+        </button>
+
+        <button id="btn-zen-mode-toggle" class="action-btn secondary hidden">
+          Switch to Zen
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Screen 3: Game Over Screen -->
+    <div id="gameover-screen" class="glass-panel">
+      <div class="gameover-header">
+        <div class="trophy-glow">🏆</div>
+        <h2 class="gameover-title">Time's Up!</h2>
+        <p class="gameover-subtitle">Awesome popping session!</p>
+      </div>
+
+      <div class="gameover-stats">
+        <div class="stats-row">
+          <span>Final Score</span>
+          <span id="final-score" class="stat-highlight">0</span>
+        </div>
+        <div class="stats-row" id="high-score-row">
+          <span>Best Score</span>
+          <span id="gameover-best" class="stat-highlight">0</span>
+        </div>
+        <div class="stats-row">
+          <span>Bubbles Popped</span>
+          <span id="gameover-popped">0</span>
+        </div>
+        <div class="stats-row">
+          <span>Sheets Cleared</span>
+          <span id="gameover-sheets">0</span>
+        </div>
+        <div class="stats-row">
+          <span>Max Combo</span>
+          <span id="gameover-combo">x1</span>
+        </div>
+      </div>
+
+      <div class="gameover-actions">
+        <button id="btn-play-again" class="primary-btn">Play Again</button>
+        <button id="btn-menu" class="secondary-btn">Main Menu</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="bubble.js"></script>
+</body>
+</html>
